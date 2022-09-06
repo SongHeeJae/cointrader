@@ -1,0 +1,6 @@
+server:
+  port: 9191
+
+#logging:
+#  level:
+#    root: debug
