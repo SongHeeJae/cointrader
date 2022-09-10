@@ -23,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
  * @since 2022. 08. 27.
  */
 @Slf4j
-@Service
+// @Service
 public class TokenService {
 	private static final String ACCESS_KEY = "";
 	private static final String SECRET_KEY = "";

@@ -1,4 +1,4 @@
-package kukekyakya.cointrader.client;
+package kukekyakya.cointrader.client.upbit;
 
 import org.springframework.web.bind.annotation.GetMapping;
 

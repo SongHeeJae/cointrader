@@ -1,6 +1,5 @@
-package kukekyakya.cointrader.client.response;
+package kukekyakya.cointrader.client.upbit.response;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;

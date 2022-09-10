@@ -1,12 +1,10 @@
 package kukekyakya.cointrader.controller;
 
-import java.util.concurrent.Executors;
-
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import kukekyakya.cointrader.service.CoinTradeService;
+import kukekyakya.cointrader.service.BinanceCoinTradeService;
+import kukekyakya.cointrader.service.UpbitCoinTradeService;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -18,15 +16,15 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 public class CoinTradeController {
-	private final CoinTradeService coinTradeService;
+	private final BinanceCoinTradeService binanceCoinTradeService;
 
 	@PostMapping("/trade/start")
 	public void start() {
-		new Thread(() -> coinTradeService.start()).start();
+		new Thread(() -> binanceCoinTradeService.start()).start();
 	}
 
 	@PostMapping("/trade/end")
 	public void end() {
-		coinTradeService.end();
+		binanceCoinTradeService.end();
 	}
 }

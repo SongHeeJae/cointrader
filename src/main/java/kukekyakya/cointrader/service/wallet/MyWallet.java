@@ -3,7 +3,7 @@ package kukekyakya.cointrader.service.wallet;
 import java.util.HashMap;
 import java.util.Map;
 
-import kukekyakya.cointrader.client.response.Market;
+import kukekyakya.cointrader.client.upbit.response.Market;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
