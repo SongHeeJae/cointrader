@@ -101,38 +101,49 @@ public class BinanceCoinTradeSecondService {
 				if (price <= MINIMUM_PRICE)
 					continue;
 
-				List<BinanceCandle> binanceCandles = binanceClientService.readCandles(symbol, CANDLE_INTERVAL, 10);
-				if(binanceCandles.size() < 10) continue;
+				if (alreadyBuyCoin.contains(symbol)) continue;
 
-				BinanceCandle newestCandle = binanceCandles.get(9); // 마지막 캔들이 최신
-				BinanceCandle middleCandle = binanceCandles.get(8);
-				BinanceCandle oldestCandle = binanceCandles.get(7);
-				BinanceCandle maxOldestCandle = binanceCandles.get(6);
-				BinanceCandle maxMaxOldestCandle = binanceCandles.get(5);
+				LocalDateTime lockDateTime = BUY_LOCK_DATE_TIME.get(symbol);
+				if (lockDateTime != null) {
+					if (lockDateTime.isBefore(LocalDateTime.now())) {
+						BUY_LOCK_DATE_TIME.remove(symbol);
+					} else {
+						continue;
+					}
+				}
 
+				// binanceClientService.changeLeverage(symbol, LEVERAGE.get());
+
+				List<BinanceCandle> binanceCandles = binanceClientService.readCandles(symbol, CANDLE_INTERVAL, COUNT);
+				if(binanceCandles.size() < COUNT) continue;
+
+				BinanceCandle newestCandle = binanceCandles.get(COUNT - 1); // 마지막 캔들이 최신
+				BinanceCandle middleCandle = binanceCandles.get(COUNT - 2);
+				BinanceCandle oldestCandle = binanceCandles.get(COUNT - 3);
+				BinanceCandle maxOldestCandle = binanceCandles.get(COUNT - 4);
+				BinanceCandle maxMaxOldestCandle = binanceCandles.get(COUNT - 5); // 인덱스 범위 조심
+				//
 				double oldestPercent = calPercent(Double.valueOf(oldestCandle.getOpenPrice()),
 					Double.valueOf(oldestCandle.getClosePrice()));
-				double middlePercent = calPercent(Double.valueOf(middleCandle.getOpenPrice()),
-					Double.valueOf(middleCandle.getClosePrice()));
-				double newestPercent = calPercent(Double.valueOf(newestCandle.getOpenPrice()),
-					Double.valueOf(newestCandle.getClosePrice()));
+				double middlePercent = calPercent(middleCandle.getOpenPrice(), middleCandle.getClosePrice());
+				double newestPercent = calPercent(newestCandle.getOpenPrice(), newestCandle.getClosePrice());
 
-				double maxPrice = Double.valueOf(binanceCandles.get(0).getClosePrice());
+				double maxPrice = binanceCandles.get(0).getHighPrice();
 				for(int i=1; i<7; i++) {
-					maxPrice = Math.max(maxPrice, Double.valueOf(binanceCandles.get(i).getClosePrice()));
+					maxPrice = Math.max(maxPrice, binanceCandles.get(i).getHighPrice());
 				}
 
 				// 급락 후 급등하는 종목 방지. 최근 10개 봉의 최고가가 최신가보다 크면, continue;
-				// if(maxPrice >= Double.valueOf(newestCandle.getClosePrice())) {
-				// 	continue;
-				// }
+				if(maxPrice >= Double.valueOf(newestCandle.getClosePrice())) {
+					continue;
+				}
 
-				// double highPercent = calPercent(Double.valueOf(newestCandle.getOpenPrice()),
-				// 	Double.valueOf(newestCandle.getHighPrice()));
-				// double lowPercent = calPercent(Double.valueOf(newestCandle.getOpenPrice()),
-				// 	Double.valueOf(newestCandle.getLowPrice()));
-				// double closePercent = calPercent(Double.valueOf(newestCandle.getOpenPrice()),
-				// 	Double.valueOf(newestCandle.getClosePrice()));
+				double highPercent = calPercent(Double.valueOf(newestCandle.getOpenPrice()),
+					Double.valueOf(newestCandle.getHighPrice()));
+				double lowPercent = calPercent(Double.valueOf(newestCandle.getOpenPrice()),
+					Double.valueOf(newestCandle.getLowPrice()));
+				double closePercent = calPercent(Double.valueOf(newestCandle.getOpenPrice()),
+					Double.valueOf(newestCandle.getClosePrice()));
 
 				double newestCloseAndHighDiffPercent = calPercent(Double.valueOf(newestCandle.getClosePrice()),
 					Double.valueOf(newestCandle.getHighPrice()));
@@ -144,63 +155,58 @@ public class BinanceCoinTradeSecondService {
 
 				List<BinanceCandle> minuteCandles = binanceClientService.readCandles(symbol, CandleInterval.MINUTE_1, 1);
 
-				// 윗꼬리 있고, 아랫꼬리 없는 상태.
+				double upPercent = calPercent(Double.valueOf(middleCandle.getLowPrice()), Double.valueOf(newestCandle.getClosePrice()));
+				double downPercent = calPercent(Double.valueOf(middleCandle.getHighPrice()), Double.valueOf(newestCandle.getClosePrice()));
+
 				if (
-					(calPercent(Double.valueOf(middleCandle.getLowPrice()), Double.valueOf(newestCandle.getClosePrice())) >= DIFF_PERCENT
-						// && calPercent(Double.valueOf(middleCandle.getHighPrice()), Double.valueOf(newestCandle.getClosePrice())) <= -0.003 // 윗 꼬리 갭
-						// && lowAndOpenDiffPercent <= 0.002 // 아랫 꼬리 갭. 윗 꼬리 이후, 아랫 꼬리 남기면서 다시 올라오는 종목 방지
-						// && (minuteCandles.get(0).isMinusCandle())
-
-						// && newestCandle.isPlusCandle()
-						// && middleCandle.isPlusCandle()
-						// && oldestCandle.isPlusCandle()
-						// && (maxOldestCandle.isPlusCandle() || maxMaxOldestCandle.isPlusCandle())
+					(
+						middlePercent >= DIFF_PERCENT
+							// calPercent(middleCandle.getHighPrice(), middleCandle.getClosePrice()) + newestPercent <= -0.003 &&
+							// oldestCandle.isPlusCandle()
+							// minuteCandles.get(0).isMinusCandle()
 					)
-
-					// ||
-
-					// (newestPercent >= DIFF_PERCENT
-					// 	// && calPercent(Double.valueOf(newestCandle.getHighPrice()), Double.valueOf(newestCandle.getClosePrice())) >= 0.003
-					// 	// && (minuteCandles.get(0).isMinusCandle())
-					// 	&& middleCandle.isPlusCandle()
-					// 	&& oldestCandle.isPlusCandle()
-						// && (maxOldestCandle.isPlusCandle() || maxMaxOldestCandle.isPlusCandle())
-					// )
+				// ||
+				// 	(
+				// 		newestPercent + middlePercent >= DIFF_PERCENT
+				// 			// calPercent(newestCandle.getHighPrice(), newestCandle.getClosePrice()) <= -0.003 &&
+				// 			// middleCandle.isPlusCandle()
+				// 			// minuteCandles.get(0).isMinusCandle()
+				// 	)
 				) {
-					LocalDateTime lockDateTime = BUY_LOCK_DATE_TIME.get(symbol);
-					if (lockDateTime != null) {
-						if (lockDateTime.isBefore(LocalDateTime.now())) {
-							BUY_LOCK_DATE_TIME.remove(symbol);
-						} else {
-							continue;
-						}
-					}
+					// 급등 후 급락 숏 포지션
 
-					if (alreadyBuyCoin.contains(symbol)) continue;
+					double stopPriceWhenUp = price * (1 - SELL_PERCENT_P);
+					double stopPriceWhenDown = price * (1 + SELL_PERCENT_M);
 
-					double stopPriceWhenUp = IS_SHORT.get() ? price * (1 - SELL_PERCENT_P) : price * (1 + SELL_PERCENT_P);
-					double stopPriceWhenDown = IS_SHORT.get() ? price * (1 + SELL_PERCENT_M) : price * (1 - SELL_PERCENT_M);
+					// log.info("구매 완료 symbol = {}, upPercent = {}", symbol, String.format("%.4f", upPercent));
+					log.info("찾기 완료 symbol = {}, upPercent = {}", symbol, String.format("%.4f", upPercent));
 
-					log.info("구매 완료 symbol = {}, oldestPercent = {}, closeAndHighDiffPercent = {}, lowAndOpenDiffPercent = {}",
-						symbol, String.format("%.4f", middlePercent),
-						String.format("%.4f", newestCloseAndHighDiffPercent), String.format("%.4f", newestLowAndOpenDiffPercent));
-
-					// binanceClientService.cancelOrder(symbol);
-
-					// binanceClientService.changeMarginType(symbol, MARGIN_TYPE);
-					binanceClientService.changeLeverage(symbol, LEVERAGE.get());
-
-					BinanceOrder buyOrderResponse = binanceClientService.buyOrder(symbol,
-						IS_SHORT.get() ? OrderSide.SELL : OrderSide.BUY, OrderType.MARKET,
+					BinanceOrder buyOrderResponse = binanceClientService.buyOrder(symbol, OrderSide.SELL, OrderType.MARKET,
 						START_BUY_MONEY * LEVERAGE.get() / price);
 					if(buyOrderResponse != null) {
-						binanceClientService.sellOrder(symbol, IS_SHORT.get() ? OrderSide.BUY : OrderSide.SELL,
+						binanceClientService.sellOrder(symbol, OrderSide.BUY,
 							OrderType.TAKE_PROFIT_MARKET, stopPriceWhenUp, "%.8f");
-						binanceClientService.sellOrder(symbol, IS_SHORT.get() ? OrderSide.BUY : OrderSide.SELL,
+						binanceClientService.sellOrder(symbol, OrderSide.BUY,
 							OrderType.STOP_MARKET, stopPriceWhenDown, "%.8f");
 					}
 
-					BUY_LOCK_DATE_TIME.put(symbol, LocalDateTime.now().plusMinutes(CANDLE_INTERVAL.getMinutes() * 2 + 1));
+					BUY_LOCK_DATE_TIME.put(symbol, LocalDateTime.now().plusMinutes(CANDLE_INTERVAL.getMinutes()));
+				}
+				else if (downPercent <= -DIFF_PERCENT) {
+					// 급락 롱 포지션
+					double stopPriceWhenUp = price * (1 + SELL_PERCENT_P);
+					double stopPriceWhenDown = price * (1 - SELL_PERCENT_M);
+
+					log.info("구매 완료 symbol = {}, downPercent = {}", symbol, String.format("%.4f", downPercent));
+
+					BinanceOrder buyOrderResponse = binanceClientService.buyOrder(symbol,
+						OrderSide.BUY, OrderType.MARKET, START_BUY_MONEY * LEVERAGE.get() / price);
+					if(buyOrderResponse != null) {
+						binanceClientService.sellOrder(symbol, OrderSide.SELL,
+							OrderType.TAKE_PROFIT_MARKET, stopPriceWhenUp, "%.8f");
+						binanceClientService.sellOrder(symbol, OrderSide.SELL,
+							OrderType.STOP_MARKET, stopPriceWhenDown, "%.8f");
+					}
 				}
 			}
 		}

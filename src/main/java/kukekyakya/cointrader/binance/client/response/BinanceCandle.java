@@ -36,6 +36,22 @@ public class BinanceCandle {
 	private String takerBuyQuoteAssetVolume;
 	private String ignoreField;
 
+	public Double getClosePrice() {
+		return Double.valueOf(closePrice);
+	}
+
+	public Double getHighPrice() {
+		return Double.valueOf(highPrice);
+	}
+
+	public Double getLowPrice() {
+		return Double.valueOf(lowPrice);
+	}
+
+	public Double getOpenPrice() {
+		return Double.valueOf(openPrice);
+	}
+
 	public boolean isPlusCandle() {
 		return Double.valueOf(openPrice) < Double.valueOf(closePrice);
 	}
